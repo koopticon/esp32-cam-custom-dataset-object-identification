@@ -382,81 +382,43 @@ void loop() {
     // No need to do anything in the main loop
 }
 ```
-# ESP32 MJPEG Stream Server
-
-This project allows you to stream live video from an ESP32-CAM module over a WiFi network using MJPEG. The code connects the ESP32 to a WiFi network and serves a video stream via an MJPEG HTTP server.
-
-## Requirements
-
-- **ESP32-CAM** board
-- **Arduino IDE** with the ESP32 board support installed
-- **eloquent_esp32cam library** (for MJPEG streaming)
-
-## Hardware Setup
-
-- ESP32-CAM module (make sure it’s properly wired and connected).
-- Ensure you have a stable WiFi network for the ESP32 to connect to.
-
-## Software Setup
-
-1. Open the Arduino IDE.
-2. Go to **Sketch > Include Library > Manage Libraries**.
-3. Install the `eloquent_esp32cam` library.
-4. Set up your **WiFi SSID** and **password** in the code.
-5. Upload the code to your ESP32-CAM board.
+# opencv yolo model to url real time stream
 
 ## Code
 
-```cpp
-#define WIFI_SSID "---"
-#define WIFI_PASS "---"
-#define HOSTNAME  "esp32cam"
+```python
+from ultralytics import YOLO
+import cv2
 
-#include <eloquent_esp32cam.h>
-#include <eloquent_esp32cam/viz/mjpeg.h>
+# Load the YOLOv8 model
+model = YOLO('/Users/jawadkon/Downloads/best.pt')  # Replace 'best.pt' with the path to your trained YOLOv8 model
 
-using namespace eloq;
-using namespace eloq::viz;
+# Set up video capture (e.g., webcam or IP camera)
+url = "http://192.168.1.88:81"  # Replace with your IP camera URL
+cap = cv2.VideoCapture(url)  # For webcam, use 0
 
-/**
- * Setup function runs once on boot.
- */
-void setup() {
-    delay(3000);
-    Serial.begin(115200);
-    Serial.println("___MJPEG STREAM SERVER___");
+# Process frames from the video feed
+while True:
+    success, frame = cap.read()
+    if not success:
+        break
 
-    // Camera settings
-    // Replace with your own model if needed
-    camera.pinout.aithinker();
-    camera.brownout.disable();
-    camera.resolution.vga();
-    camera.quality.high();
+    # Perform inference on the frame
+    results = model(frame)
 
-    // Initialize the camera
-    while (!camera.begin().isOk())
-        Serial.println(camera.exception.toString());
+    # Render the detected objects on the frame
+    annotated_frame = results[0].plot()
 
-    // Connect to WiFi
-    while (!wifi.connect().isOk())
-        Serial.println(wifi.exception.toString());
+    # Display the annotated frame
+    cv2.imshow("YOLOv8 Detection", annotated_frame)
 
-    // Start MJPEG HTTP server
-    while (!mjpeg.begin().isOk())
-        Serial.println(mjpeg.exception.toString());
+    # Exit on pressing 'q'
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
-    Serial.println("Camera OK");
-    Serial.println("WiFi OK");
-    Serial.println("MjpegStream OK");
-    Serial.println(mjpeg.address());
-}
-
-/**
- * The loop function runs continuously.
- */
-void loop() {
-    // The HTTP server runs in a task, so no need to add anything here.
-}
+# Release resources
+cap.release()
+cv2.destroyAllWindows()
 ```
 
 
